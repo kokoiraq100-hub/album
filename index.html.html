@@ -3,103 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة تحكم Jawla360 - الألبومات التفاعلية</title>
-    <!-- Tailwind CSS للتصميم السريع والأنيق -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- مكتبة لتوليد الـ QR Code أوتوماتيكياً -->
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <title>Jawla360 - لوحة التحكم</title>
+    <style>
+        body { font-family: Tahoma, sans-serif; background: #111827; color: #fff; margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: auto; background: #1f2937; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+        h2, h3 { color: #f3f4f6; border-bottom: 2px solid #374151; padding-bottom: 10px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #d1d5db; }
+        input[type="text"], input[type="file"] { width: 100%; padding: 10px; background: #374151; border: 1px solid #4b5563; color: #fff; border-radius: 6px; box-sizing: border-box; }
+        button { background: #ef4444; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; }
+        button:hover { background: #dc2626; }
+        table { width: 100%; margin-top: 20px; border-collapse: collapse; background: #374151; border-radius: 6px; overflow: hidden; }
+        th, td { padding: 12px; text-align: center; border-bottom: 1px solid #4b5563; }
+        th { background: #4b5563; }
+        a { color: #38bdf8; text-decoration: none; }
+    </style>
 </head>
-<body class="bg-gray-900 text-white min-h-screen flex flex-col items-center justify-center p-4">
-
-    <div class="w-full max-w-lg bg-gray-800 rounded-2xl shadow-2xl p-6 border border-gray-700">
-        <div class="text-center mb-6">
-            <h1 class="text-2xl font-bold text-red-500">Jawla360 AR System</h1>
-            <p class="text-gray-400 text-sm mt-1">لوحة تحكم إضافة ألبومات الزفاف التفاعلية</p>
-        </div>
-
-        <!-- فورم إدخال بيانات الزبون -->
-        <form id="arForm" class="space-y-4" onsubmit="generateSystem(event)">
-            <div>
-                <label class="block text-sm font-medium text-gray-300 mb-1">اسم العرسان (مثلاً: Ahmed_Fatima)</label>
-                <input type="text" id="clientName" required class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-red-500 text-white" placeholder="اكتب اسم العرسان بالإنجليزية بدون مسافات">
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium text-gray-300 mb-1">صورة الألبوم المستهدفة (Image Target)</label>
-                <input type="file" id="targetFile" accept="image/*" required class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-500 file:text-white hover:file:bg-red-600">
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium text-gray-300 mb-1">فيديو الكواليس (MP4)</label>
-                <input type="file" id="videoFile" accept="video/mp4" required class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-500 file:text-white hover:file:bg-red-600">
-            </div>
-
-            <button type="submit" class="w-full py-3 bg-red-500 hover:bg-red-600 rounded-lg font-bold text-white transition duration-200 shadow-lg">
-                إنشاء وتوليد نظام الـ AR للزبون
-            </button>
-        </form>
-
-        <!-- منطقة عرض النتائج والرابط والـ QR Code -->
-        <div id="resultSection" class="hidden mt-6 p-4 bg-gray-700 rounded-xl border border-gray-600 text-center space-y-4">
-            <h3 class="text-lg font-semibold text-green-400">تم تجهيز النظام بنجاح!</h3>
-            <div>
-                <p class="text-xs text-gray-300 mb-1">رابط العرض المباشر للزبون:</p>
-                <input type="text" id="resultLink" readonly class="w-full px-3 py-2 bg-gray-800 text-green-300 rounded border border-gray-600 text-center text-sm select-all">
+<body>
+    <div class="container">
+        <h2>💍 Jawla360 - إدارة الألبومات التفاعلية</h2>
+        
+        <!-- نموذج إضافة عريس جديد -->
+        <form action="/create-client" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label>اسم العرسان (مثلاً: Ahmed_Fatima):</label>
+                <input type="text" name="clientName" required placeholder="اكتب اسم العرسان هنا">
             </div>
             
-            <div class="flex justify-center">
-                <div id="qrcode" class="p-2 bg-white rounded-lg"></div>
+            <div class="form-group">
+                <label>ملف بصمة الألبوم (.mind):</label>
+                <input type="file" name="targetFile" accept=".mind" required>
             </div>
-            <p class="text-xs text-gray-400">امسح الـ QR أو اعطه للزبون لطباعته على الألبوم.</p>
-        </div>
+            
+            <div class="form-group">
+                <label>فيديو الكواليس (MP4):</label>
+                <input type="file" name="videoFile" accept="video/mp4" required>
+            </div>
+            
+            <button type="submit">إنشاء وتوليد نظام الـ AR للزبون</button>
+        </form>
+
+        <hr style="border: 0; border-top: 1px solid #374151; margin: 40px 0;">
+
+        <!-- قسم عرض العرسان السابقين -->
+        <h3>📂 قائمة العرسان السابقين المسجلين</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>اسم العرسان</th>
+                    <th>رابط الألبوم المباشر</th>
+                </tr>
+            </thead>
+            <tbody id="clientsTable">
+                <tr><td colspan="2">جاري التحميل...</td></tr>
+            </tbody>
+        </table>
     </div>
 
     <script>
-        async function generateSystem(e) {
-            e.preventDefault();
-            const clientName = document.getElementById('clientName').value.trim();
-            const targetFile = document.getElementById('targetFile').files[0];
-            const videoFile = document.getElementById('videoFile').files[0];
-
-            const formData = new FormData();
-            formData.append('clientName', clientName);
-            formData.append('targetFile', targetFile);
-            formData.append('videoFile', videoFile);
-
-            try {
-                // إرسال البيانات إلى السيرفر المحلي
-                const response = await fetch('/api/create-wedding', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    const generatedUrl = data.clientUrl;
-                    
-                    // إظهار النتائج
-                    document.getElementById('resultLink').value = generatedUrl;
-                    document.getElementById('resultSection').classList.remove('hidden');
-                    
-                    // توليد الـ QR Code
-                    document.getElementById('qrcode').innerHTML = "";
-                    new QRCode(document.getElementById("qrcode"), {
-                        text: generatedUrl,
-                        width: 128,
-                        height: 128,
-                        colorDark : "#000000",
-                        colorLight : "#ffffff",
-                        correctLevel : QRCode.CorrectLevel.H
-                    });
-                } else {
-                    alert('خطأ: ' + data.message);
+        // جلب قائمة العرسان السابقين أوتوماتيكياً
+        fetch('/api/clients')
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.getElementById('clientsTable');
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="2">لا يوجد عرسان مسجلين حالياً.</td></tr>';
+                    return;
                 }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('حدث خطأ في الاتصال بالسيرفر.');
-            }
-        }
+                tbody.innerHTML = '';
+                data.forEach(client => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>\${client.name}</strong></td>
+                        <td><a href="\${client.url}" target="_blank">فتح رابط العرض</a></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById('clientsTable').innerHTML = '<tr><td colspan="2">فشل في جلب البيانات.</td></tr>';
+            });
     </script>
 </body>
 </html>

@@ -1,180 +1,161 @@
 const express = require('express');
 const fileUpload = require('express-fileupload');
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
+const QRCode = require('qrcode');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
-app.use(fileUpload());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(fileUpload());
 
-// السماح بقراءة مجلد العرسان
-app.use('/clients', express.static(path.join(__dirname, 'clients')));
+// مجلد لتخزين بيانات العرسان
+const CLIENTS_DIR = path.join(__dirname, 'clients');
+if (!fs.existsSync(CLIENTS_DIR)) {
+    fs.mkdirSync(CLIENTS_DIR);
+}
 
-// عرض لوحة التحكم المطورة المباشرة
-app.get('/', (req, res) => {
-    res.send(`
-    <!DOCTYPE html>
-    <html lang="ar" dir="rtl">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>لوحة تحكم Jawla360 - الألبومات التفاعلية</title>
-        <script src="https://cdn.tailwindcss.com"></script>
-        <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-    </head>
-    <body class="bg-gray-900 text-white min-h-screen flex flex-col items-center justify-center p-4">
-        <div class="w-full max-w-lg bg-gray-800 rounded-2xl shadow-2xl p-6 border border-gray-700">
-            <div class="text-center mb-6">
-                <h1 class="text-2xl font-bold text-red-500">Jawla360 AR System</h1>
-                <p class="text-gray-400 text-sm mt-1">لوحة تحكم إضافة ألبومات الزفاف التفاعلية</p>
-            </div>
-            <form id="arForm" class="space-y-4" onsubmit="generateSystem(event)">
-                <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-1">اسم العرسان (مثلاً: Ahmed_Fatima)</label>
-                    <input type="text" id="clientName" required class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-red-500 text-white" placeholder="اكتب اسم العرسان بالإنجليزية بدون مسافات">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-1">ملف بصمة الألبوم (.mind)</label>
-                    <input type="file" id="targetMindFile" accept=".mind" required class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-500 file:text-white hover:file:bg-red-600">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-1">فيديو الكواليس (MP4)</label>
-                    <input type="file" id="videoFile" accept="video/mp4" required class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-500 file:text-white hover:file:bg-red-600">
-                </div>
-                <button type="submit" class="w-full py-3 bg-red-500 hover:bg-red-600 rounded-lg font-bold text-white transition duration-200 shadow-lg">
-                    إنشاء وتوليد نظام الـ AR للزبون
-                </button>
-            </form>
-            <div id="resultSection" class="hidden mt-6 p-4 bg-gray-700 rounded-xl border border-gray-600 text-center space-y-4">
-                <h3 class="text-lg font-semibold text-green-400">تم تجهيز النظام بنجاح!</h3>
-                <div>
-                    <p class="text-xs text-gray-300 mb-1">رابط العرض المباشر للزبون:</p>
-                    <input type="text" id="resultLink" readonly class="w-full px-3 py-2 bg-gray-800 text-green-300 rounded border border-gray-600 text-center text-sm select-all">
-                </div>
-                <div class="flex justify-center">
-                    <div id="qrcode" class="p-2 bg-white rounded-lg"></div>
-                </div>
-                <p class="text-xs text-gray-400">امسح الـ QR أو اعطه للزبون لطباعته على الألبوم.</p>
-            </div>
-        </div>
-        <script>
-            async function generateSystem(e) {
-                e.preventDefault();
-                const clientName = document.getElementById('clientName').value.trim();
-                const targetMindFile = document.getElementById('targetMindFile').files[0];
-                const videoFile = document.getElementById('videoFile').files[0];
-                const formData = new FormData();
-                formData.append('clientName', clientName);
-                formData.append('targetMindFile', targetMindFile);
-                formData.append('videoFile', videoFile);
-                try {
-                    const response = await fetch('/api/create-wedding', { method: 'POST', body: formData });
-                    const data = await response.json();
-                    if (data.success) {
-                        const generatedUrl = data.clientUrl;
-                        document.getElementById('resultLink').value = generatedUrl;
-                        document.getElementById('resultSection').classList.remove('hidden');
-                        document.getElementById('qrcode').innerHTML = "";
-                        new QRCode(document.getElementById("qrcode"), {
-                            text: generatedUrl, width: 128, height: 128, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H
-                        });
-                    } else {
-                        alert('خطأ: ' + data.message);
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                    alert('حدث خطأ في الاتصال بالسيرفر.');
-                }
-            }
-        </script>
-    </body>
-    </html>
-    `);
+// السماح بقراءة الملفات الثابتة
+app.use('/clients', express.static(CLIENTS_DIR));
+app.use(express.static(__dirname));
+
+// 1. مسار جلب قائمة العرسان السابقين (إدارة العرسان)
+app.get('/api/clients', (req, res) => {
+    fs.readdir(CLIENTS_DIR, { withFileTypes: true }, (err, files) => {
+        if (err) {
+            return res.status(500).json({ error: 'تعذر قراءة مجلد العرسان' });
+        }
+        const clients = files
+            .filter(dirent => dirent.isDirectory())
+            .map(dirent => {
+                const clientName = dirent.name;
+                return {
+                    name: clientName,
+                    url: `${req.protocol}://${req.get('host')}/clients/${clientName}/index.html`
+                };
+            });
+        res.json(clients);
+    });
 });
 
-// مسار استقبال ورفع ملفات الزبون
-app.post('/api/create-wedding', (req, res) => {
-    if (!req.files || !req.body.clientName) {
-        return res.status(400).json({ success: false, message: 'الرجاء إدخال البيانات.' });
+// 2. مسار رفع وعمل ألبوم جديد للعروسين
+app.post('/create-client', async (req, res) => {
+    try {
+        const { clientName } = req.body;
+        if (!clientName || !req.files || !req.files.targetFile || !req.files.videoFile) {
+            return res.status(400).send('يرجى إدخال اسم العرسان ورفع ملف الـ Mind والفيديو.');
+        }
+
+        const safeName = clientName.replace(/[^a-zA-Z0-9_أ-ي]/g, '_');
+        const clientFolder = path.join(CLIENTS_DIR, safeName);
+        
+        if (!fs.existsSync(clientFolder)) {
+            fs.mkdirSync(clientFolder, { recursive: true });
+        }
+
+        const targetFile = req.files.targetFile;
+        const videoFile = req.files.videoFile;
+
+        const targetPath = path.join(clientFolder, 'targets.mind');
+        const videoPath = path.join(clientFolder, 'video.mp4');
+
+        await targetFile.mv(targetPath);
+        await videoFile.mv(videoPath);
+
+        // إنشاء صفحة HTML تفاعلية نظيفة وصافية للـ AR (تظهر الفيديو فقط عند توجيه الكاميرا)
+        const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jawla360 - ${clientName}</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; }
+        #loading {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: #fff; font-family: sans-serif; font-size: 18px; text-align: center; z-index: 999;
+            background: rgba(0,0,0,0.8); padding: 20px 30px; border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">جاري تهيئة ألبوم Jawla360 التفاعلي...<br><small>يرجى توجيه الكاميرا نحو صورة الألبوم</small></div>
+
+    <a-scene mindar-image="imageTargetSrc: ./targets.mind;" color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights: true" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+        <a-assets>
+            <video id="weddingVideo" src="./video.mp4" preload="auto" response-type="arraybuffer" webkit-playsinline playsinline controls muted></video>
+        </a-assets>
+
+        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+        <a-entity mindar-image-target="targetIndex: 0" id="targetEntity">
+            <a-video src="#weddingVideo" position="0 0 0" width="1" height="0.5625" rotation="0 0 0"></a-video>
+        </a-entity>
+    </a-scene>
+
+    <script>
+        const sceneEl = document.querySelector('a-scene');
+        sceneEl.addEventListener('arReady', () => {
+            document.getElementById('loading').style.display = 'none';
+        });
+
+        const targetEntity = document.querySelector('#targetEntity');
+        const video = document.querySelector('#weddingVideo');
+
+        targetEntity.addEventListener('targetFound', () => {
+            video.play();
+        });
+
+        targetEntity.addEventListener('targetLost', () => {
+            video.pause();
+        });
+    </script>
+</body>
+</html>
+        `;
+
+        fs.writeFileSync(path.join(clientFolder, 'index.html'), htmlContent);
+
+        const clientUrl = `${req.protocol}://${req.get('host')}/clients/${safeName}/index.html`;
+        const qrCodeDataUrl = await QRCode.toDataURL(clientUrl);
+
+        res.send(`
+            <!DOCTYPE html>
+            <html lang="ar" dir="rtl">
+            <head>
+                <meta charset="UTF-8">
+                <title>تم تجهيز الألبوم بنجاح</title>
+                <style>
+                    body { font-family: Tahoma, sans-serif; background: #111827; color: #fff; text-align: center; padding: 40px; }
+                    .card { background: #1f2937; max-width: 500px; margin: auto; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+                    a { color: #38bdf8; text-decoration: none; word-break: break-all; }
+                    .btn { display: inline-block; margin-top: 20px; background: #ef4444; color: white; padding: 10px 20px; border-radius: 6px; }
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    <h2>🎉 تم تجهيز النظام بنجاح!</h2>
+                    <p>رابط العرض المباشر للزبون:</p>
+                    <p><a href="${clientUrl}" target="_blank">${clientUrl}</a></p>
+                    <br>
+                    <img src="${qrCodeDataUrl}" alt="QR Code" style="width: 200px; border-radius: 8px; background: #fff; padding: 10px;">
+                    <br><br>
+                    <a href="/" class="btn">إرجاع للوحة التحكم</a>
+                </div>
+            </body>
+            </html>
+        `);
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('حدث خطأ أثناء معالجة الطلب.');
     }
-
-    const clientName = req.body.clientName.trim().toLowerCase().replace(/\s+/g, '_');
-    const targetMindFile = req.files.targetMindFile;
-    const videoFile = req.files.videoFile;
-
-    const clientDir = path.join(__dirname, 'clients', clientName);
-    if (!fs.existsSync(clientDir)) {
-        fs.mkdirSync(clientDir, { recursive: true });
-    }
-
-    videoFile.mv(path.join(clientDir, 'video.mp4'), (err) => {
-        if (err) return res.status(500).json({ success: false, message: 'فشل حفظ الفيديو.' });
-    });
-
-    targetMindFile.mv(path.join(clientDir, 'targets.mind'), (err) => {
-        if (err) return res.status(500).json({ success: false, message: 'فشل حفظ ملف البصمة.' });
-    });
-
-    // قالب صفحة الـ AR الخاصة بالزبون
-    const htmlTemplate = `
-    <!DOCTYPE html>
-    <html lang="ar" dir="rtl">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>ألبوم ذكريات - ${clientName}</title>
-        <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
-        <style>
-          body { margin: 0; overflow: hidden; }
-          #start-btn {
-            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
-            padding: 15px 35px; font-size: 20px; background: #ff4757; color: white;
-            border: none; border-radius: 30px; z-index: 99999; cursor: pointer; font-weight: bold;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.4); font-family: Tahoma, sans-serif;
-          }
-        </style>
-      </head>
-      <body>
-        <button id="start-btn" onclick="startAR()">اضغط هنا لتفعيل العرض</button>
-        <a-scene mindar-image="imageTargetSrc: ./targets.mind; uiScanning: yes;" color-space="sRGB" renderer="colorManagement: true" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
-          <a-assets>
-            <video id="vid" src="./video.mp4" preload="auto" response-type="arraybuffer" loop crossorigin="anonymous" playsinline webkit-playsinline></video>
-          </a-assets>
-          <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-          <a-entity mindar-image-target="targetIndex: 0" id="target">
-            <a-video src="#vid" position="0 0 0" height="1.77" width="1"></a-video>
-          </a-entity>
-        </a-scene>
-        <script>
-          const video = document.querySelector("#vid");
-          const button = document.querySelector("#start-btn");
-          const target = document.querySelector("#target");
-          function startAR() {
-            video.play().then(() => {
-              video.pause();
-              video.currentTime = 0;
-              button.style.display = "none";
-            });
-          }
-          target.addEventListener("targetFound", () => video.play());
-          target.addEventListener("targetLost", () => video.pause());
-        </script>
-      </body>
-    </html>
-    `;
-
-    fs.writeFileSync(path.join(clientDir, 'index.html'), htmlTemplate);
-
-    res.json({
-        success: true,
-        clientUrl: `${req.protocol}://${req.get('host')}/clients/${clientName}/index.html`
-    });
 });
 
 app.listen(PORT, () => {
-    console.log(`🚀 Server running at http://localhost:${PORT}`);
+    console.log(\`🚀 Server running at http://localhost:\${PORT}\`);
 });
