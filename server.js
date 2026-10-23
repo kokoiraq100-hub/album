@@ -157,5 +157,5 @@ app.post('/create-client', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(\`🚀 Server running at http://localhost:\${PORT}\`);
+    console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
