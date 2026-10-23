@@ -11,17 +11,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(fileUpload());
 
-// مجلد لتخزين بيانات العرسان
 const CLIENTS_DIR = path.join(__dirname, 'clients');
 if (!fs.existsSync(CLIENTS_DIR)) {
     fs.mkdirSync(CLIENTS_DIR);
 }
 
-// السماح بقراءة الملفات الثابتة
 app.use('/clients', express.static(CLIENTS_DIR));
 app.use(express.static(__dirname));
 
-// 1. مسار جلب قائمة العرسان السابقين (إدارة العرسان)
 app.get('/api/clients', (req, res) => {
     fs.readdir(CLIENTS_DIR, { withFileTypes: true }, (err, files) => {
         if (err) {
@@ -40,7 +37,6 @@ app.get('/api/clients', (req, res) => {
     });
 });
 
-// 2. مسار رفع وعمل ألبوم جديد للعروسين
 app.post('/create-client', async (req, res) => {
     try {
         const { clientName } = req.body;
@@ -64,47 +60,69 @@ app.post('/create-client', async (req, res) => {
         await targetFile.mv(targetPath);
         await videoFile.mv(videoPath);
 
-        // إنشاء صفحة HTML تفاعلية نظيفة وصافية للـ AR (تظهر الفيديو فقط عند توجيه الكاميرا)
+        // صفحة AR محسنة مع زر تفاعلي للصوت وتثبيت دقيق لحدود الصورة
         const htmlContent = `
 <!DOCTYPE html>
 <html>
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Jawla360 - ${clientName}</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: Tahoma, sans-serif; }
         #loading {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            color: #fff; font-family: sans-serif; font-size: 18px; text-align: center; z-index: 999;
-            background: rgba(0,0,0,0.8); padding: 20px 30px; border-radius: 10px;
+            color: #fff; font-size: 16px; text-align: center; z-index: 999;
+            background: rgba(0,0,0,0.85); padding: 25px; border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        #startBtn {
+            margin-top: 15px; background: #ef4444; color: white; border: none;
+            padding: 12px 25px; font-size: 16px; border-radius: 8px; cursor: pointer; font-weight: bold;
         }
     </style>
 </head>
 <body>
-    <div id="loading">جاري تهيئة ألبوم Jawla360 التفاعلي...<br><small>يرجى توجيه الكاميرا نحو صورة الألبوم</small></div>
+    <div id="loading">
+        <div id="loadText">جاري تهيئة نظام الـ AR للألبوم...</div>
+        <button id="startBtn" style="display:none;" onclick="startExperience()">اضغط هنا لبدء الألبوم والصوت</button>
+    </div>
 
-    <a-scene mindar-image="imageTargetSrc: ./targets.mind;" color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights: true" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+    <a-scene mindar-image="imageTargetSrc: ./targets.mind; filterMinCF: 0.0001; filterBeta: 0.001;" color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights: true" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
         <a-assets>
             <video id="weddingVideo" src="./video.mp4" preload="auto" response-type="arraybuffer" webkit-playsinline playsinline controls muted></video>
         </a-assets>
 
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
+        <!-- تعديل الـ width والـ height حسب قياس الصورة الحقيقية بالألبوم (مثلاً 1 للعرض و 0.75 أو 1 للطول) -->
         <a-entity mindar-image-target="targetIndex: 0" id="targetEntity">
-            <a-video src="#weddingVideo" position="0 0 0" width="1" height="0.5625" rotation="0 0 0"></a-video>
+            <a-video src="#weddingVideo" position="0 0 0" width="1" height="0.75" rotation="0 0 0"></a-video>
         </a-entity>
     </a-scene>
 
     <script>
         const sceneEl = document.querySelector('a-scene');
+        const video = document.querySelector('#weddingVideo');
+        const loadingEl = document.getElementById('loading');
+        const startBtn = document.getElementById('startBtn');
+        const loadText = document.getElementById('loadText');
+
         sceneEl.addEventListener('arReady', () => {
-            document.getElementById('loading').style.display = 'none';
+            loadText.innerText = 'الكاميرا جاهزة! وجهها نحو الصورة في الألبوم';
+            startBtn.style.display = 'inline-block';
         });
 
+        function startExperience() {
+            loadingEl.style.display = 'none';
+            video.muted = false; // تفعيل الصوت
+            video.play().then(() => {
+                video.pause(); // إيقاف مؤقت لحين ظهور الصورة بالعدسة
+            }).catch(e => console.log(e));
+        }
+
         const targetEntity = document.querySelector('#targetEntity');
-        const video = document.querySelector('#weddingVideo');
 
         targetEntity.addEventListener('targetFound', () => {
             video.play();
