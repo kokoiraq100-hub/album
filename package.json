@@ -1,0 +1,14 @@
+{
+  "name": "album",
+  "version": "1.0.0",
+  "description": "Jawla360 AR Album",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^5.3.0",
+    "express-fileupload": "^1.5.2",
+    "qrcode": "^1.5.3"
+  }
+}
