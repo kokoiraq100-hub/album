@@ -171,7 +171,7 @@ app.post('/api/create-wedding', (req, res) => {
 
     res.json({
         success: true,
-        clientUrl: `http://localhost:${PORT}/clients/${clientName}/index.html`
+        clientUrl: `${req.protocol}://${req.get('host')}/clients/${clientName}/index.html`
     });
 });
 
