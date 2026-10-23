@@ -1,0 +1,47 @@
+
+    <!DOCTYPE html>
+    <html lang="ar" dir="rtl">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>ألبوم ذكريات - dddd</title>
+        <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
+        <style>
+          body { margin: 0; overflow: hidden; }
+          #start-btn {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            padding: 15px 35px; font-size: 20px; background: #ff4757; color: white;
+            border: none; border-radius: 30px; z-index: 99999; cursor: pointer; font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4); font-family: Tahoma, sans-serif;
+          }
+        </style>
+      </head>
+      <body>
+        <button id="start-btn" onclick="startAR()">اضغط هنا لتفعيل العرض</button>
+        <a-scene mindar-image="imageTargetSrc: ./targets.mind; uiScanning: yes;" color-space="sRGB" renderer="colorManagement: true" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+          <a-assets>
+            <video id="vid" src="./video.mp4" preload="auto" response-type="arraybuffer" loop crossorigin="anonymous" playsinline webkit-playsinline></video>
+          </a-assets>
+          <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+          <a-entity mindar-image-target="targetIndex: 0" id="target">
+            <a-video src="#vid" position="0 0 0" height="1.77" width="1"></a-video>
+          </a-entity>
+        </a-scene>
+        <script>
+          const video = document.querySelector("#vid");
+          const button = document.querySelector("#start-btn");
+          const target = document.querySelector("#target");
+          function startAR() {
+            video.play().then(() => {
+              video.pause();
+              video.currentTime = 0;
+              button.style.display = "none";
+            });
+          }
+          target.addEventListener("targetFound", () => video.play());
+          target.addEventListener("targetLost", () => video.pause());
+        </script>
+      </body>
+    </html>
+    

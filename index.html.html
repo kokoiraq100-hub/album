@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم Jawla360 - الألبومات التفاعلية</title>
+    <!-- Tailwind CSS للتصميم السريع والأنيق -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- مكتبة لتوليد الـ QR Code أوتوماتيكياً -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="w-full max-w-lg bg-gray-800 rounded-2xl shadow-2xl p-6 border border-gray-700">
+        <div class="text-center mb-6">
+            <h1 class="text-2xl font-bold text-red-500">Jawla360 AR System</h1>
+            <p class="text-gray-400 text-sm mt-1">لوحة تحكم إضافة ألبومات الزفاف التفاعلية</p>
+        </div>
+
+        <!-- فورم إدخال بيانات الزبون -->
+        <form id="arForm" class="space-y-4" onsubmit="generateSystem(event)">
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">اسم العرسان (مثلاً: Ahmed_Fatima)</label>
+                <input type="text" id="clientName" required class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-red-500 text-white" placeholder="اكتب اسم العرسان بالإنجليزية بدون مسافات">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">صورة الألبوم المستهدفة (Image Target)</label>
+                <input type="file" id="targetFile" accept="image/*" required class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-500 file:text-white hover:file:bg-red-600">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">فيديو الكواليس (MP4)</label>
+                <input type="file" id="videoFile" accept="video/mp4" required class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-500 file:text-white hover:file:bg-red-600">
+            </div>
+
+            <button type="submit" class="w-full py-3 bg-red-500 hover:bg-red-600 rounded-lg font-bold text-white transition duration-200 shadow-lg">
+                إنشاء وتوليد نظام الـ AR للزبون
+            </button>
+        </form>
+
+        <!-- منطقة عرض النتائج والرابط والـ QR Code -->
+        <div id="resultSection" class="hidden mt-6 p-4 bg-gray-700 rounded-xl border border-gray-600 text-center space-y-4">
+            <h3 class="text-lg font-semibold text-green-400">تم تجهيز النظام بنجاح!</h3>
+            <div>
+                <p class="text-xs text-gray-300 mb-1">رابط العرض المباشر للزبون:</p>
+                <input type="text" id="resultLink" readonly class="w-full px-3 py-2 bg-gray-800 text-green-300 rounded border border-gray-600 text-center text-sm select-all">
+            </div>
+            
+            <div class="flex justify-center">
+                <div id="qrcode" class="p-2 bg-white rounded-lg"></div>
+            </div>
+            <p class="text-xs text-gray-400">امسح الـ QR أو اعطه للزبون لطباعته على الألبوم.</p>
+        </div>
+    </div>
+
+    <script>
+        async function generateSystem(e) {
+            e.preventDefault();
+            const clientName = document.getElementById('clientName').value.trim();
+            const targetFile = document.getElementById('targetFile').files[0];
+            const videoFile = document.getElementById('videoFile').files[0];
+
+            const formData = new FormData();
+            formData.append('clientName', clientName);
+            formData.append('targetFile', targetFile);
+            formData.append('videoFile', videoFile);
+
+            try {
+                // إرسال البيانات إلى السيرفر المحلي
+                const response = await fetch('/api/create-wedding', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const generatedUrl = data.clientUrl;
+                    
+                    // إظهار النتائج
+                    document.getElementById('resultLink').value = generatedUrl;
+                    document.getElementById('resultSection').classList.remove('hidden');
+                    
+                    // توليد الـ QR Code
+                    document.getElementById('qrcode').innerHTML = "";
+                    new QRCode(document.getElementById("qrcode"), {
+                        text: generatedUrl,
+                        width: 128,
+                        height: 128,
+                        colorDark : "#000000",
+                        colorLight : "#ffffff",
+                        correctLevel : QRCode.CorrectLevel.H
+                    });
+                } else {
+                    alert('خطأ: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('حدث خطأ في الاتصال بالسيرفر.');
+            }
+        }
+    </script>
+</body>
+</html>
